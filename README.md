@@ -1,4 +1,5 @@
-Please run run.sh with below paramter 
+Please run run.sh with below paramter
+
     - build: to build docker image"
     - run: to run image as a container"
     - deploy: to push image to private registry"

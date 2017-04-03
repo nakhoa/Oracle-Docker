@@ -1,18 +1,22 @@
 #!/bin/bash
 scenario=$1
-ORACLE_SID="myOracle"
+
 CONTAINER_NAME="oracle-12.1.0.2"
 IMAGE_NAME="oracle"
 IMAGE_VERSION="12.1.0.2"
-PRIVATE_DOCKER="anhkhoa-lap:18442"
+
+#These are the personal paramaters. Please change it.
 ORACLE1_URL="http://anhkhoa-lap:8081/repository/maven-thirdparty/org/oracle/oracledb/12.1.0.2/oracledb-12.1.0.2-linuxamd64-1of2.zip"
 ORACLE2_URL="http://anhkhoa-lap:8081/repository/maven-thirdparty/org/oracle/oracledb/12.1.0.2/oracledb-12.1.0.2-linuxamd64-2of2.zip"
+ORACLE_SID="myOracle"
+PRIVATE_DOCKER="anhkhoa-lap:18442"
+BACKUP_LOCATION="/home/builder/oracle/backup"
+DATA_LOCATION="/home/builder/oracle/oradata"
+
 
 #Please don't change value of INSTALL_FILE because it is used for Dockerfile
 INSTALL_FILE_1="linuxamd64_12102_database_1of2.zip"
 INSTALL_FILE_2="linuxamd64_12102_database_2of2.zip"
-BACKUP_LOCATION="/home/builder/oracle/backup"
-DATA_LOCATION="/home/builder/oracle/oradata"
 
 
 if [ $# -ne 1 ]; then
@@ -41,11 +45,28 @@ elif [ "$scenario" == "deploy" ]; then #This scenario is used to deploy the Orac
 	docker push $PRIVATE_DOCKER/$IMAGE_NAME:$IMAGE_VERSION-$TIME_TAG
 	docker rmi $PRIVATE_DOCKER/$IMAGE_NAME:$IMAGE_VERSION-$TIME_TAG
 elif [ "$scenario" == "clean" ]; then #This scenario delete the container
-	docker rm -f $CONTAINER_NAME
+	CONTAINER_ID=$(docker ps -q -f name=$CONTAINER_NAME -f status=exited)
+	if [ -n "$CONTAINER_ID" ]; then
+      docker rm -f $CONTAINER_ID
+    else
+      echo "Container didn't exist. Cannot clean"
+    fi
+	
 elif [ "$scenario" == "stop" ]; then #This scenario stop the container
-	docker stop $CONTAINER_NAME
+	CONTAINER_ID=$(docker ps -q -f name=$CONTAINER_NAME -f status=running)
+	if [ -n "$CONTAINER_ID" ]; then
+      docker stop $CONTAINER_ID
+    else
+      echo "Container didn't run. Cannot stop"
+    fi
 elif [ "$scenario" == "delete" ]; then #This scenario delete the Oracle Image
-	docker rmi $IMAGE_NAME:$IMAGE_VERSION
+	IMAGE_ID=$(docker images $IMAGE_NAME:$IMAGE_VERSION)
+	if [ -n "$CONTAINER_ID" ]; then
+      docker rmi $IMAGE_NAME:$IMAGE_VERSION
+    else
+      echo "Image didn't exist. Cannot delete"
+    fi
+	
 elif [ "$scenario" == "backup" ]; then
 	TIME_TAG=$(date +%s)
 	docker run --rm --name backup-data --volumes-from $CONTAINER_NAME -v $BACKUP_LOCATION:/home/oracle/backup $IMAGE_NAME:$IMAGE_VERSION tar cvf /home/oracle/backup/backup-$TIME_TAG.tar /opt/oracle/oradata
